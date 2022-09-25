@@ -1,21 +1,13 @@
-﻿using System.Text;
+﻿using System.Reflection.Metadata;
+using System.Text;
 
 namespace System.IO.Ini
 {
-	public class IniDictionary
+	public class IniFields
 	{
-		// Constans
-		const char SectionStart = '[';
-		const char SectionEnd = ']';
-		const char LineComment = ';';
-		const char KeyValueComment = '#';
-
-
-		// Variables
 		public bool IsEmpty => Fields.Count == 0;
 		public int NumberOfFields => Fields.Count;
-		readonly Dictionary<string, string> Fields = new Dictionary<string, string>();
-
+		internal readonly Dictionary<string, string> Fields = new Dictionary<string, string>();
 
 		public string? GetField(string key, string? defaultValue = null)
 		{
@@ -24,10 +16,28 @@ namespace System.IO.Ini
 
 			return defaultValue;
 		}
+	}
 
 
 
 
+
+
+
+
+	public class IniDictionary : IniFields
+	{
+		public bool HasAnySections => Sections.Count > 0;
+		public int NumberOfSections => Sections.Count;
+		readonly Dictionary<string, IniFields> Sections = new Dictionary<string, IniFields>();
+
+		public IniFields? GetSection(string key, IniFields? defaultValue = null)
+		{
+			if (Sections.TryGetValue(key, out var section))
+				return section;
+
+			return defaultValue;
+		}
 
 		// "Constructors"
 		public static IniDictionary FromStream(Stream stream) => FromStream(stream, Encoding.UTF8);
@@ -120,7 +130,17 @@ namespace System.IO.Ini
 
 
 
-		// Helper methods
+
+
+
+		// Constans
+		internal const char SectionStart = '[';
+		internal const char SectionEnd = ']';
+		internal const char LineComment = ';';
+		internal const char KeyValueComment = '#';
+
+
+		// Helpers
 		static bool FindStartOfContent(string line, out int index)
 		{
 			for (index = 0; index < line.Length; index++)
@@ -136,7 +156,7 @@ namespace System.IO.Ini
 		static bool FindEndOfKey(string line, int startIndex, out int index)
 		{
 			index = startIndex;
-			while(index < line.Length)
+			while (index < line.Length)
 			{
 				index++;
 				if (char.IsWhiteSpace(line[index]) || line[index] == '=')
@@ -149,7 +169,7 @@ namespace System.IO.Ini
 
 		static int FindEndOfLine(string line)
 		{
-			for(var i = line.Length-1; i > 0; i--)
+			for (var i = line.Length - 1; i > 0; i--)
 			{
 				if (!char.IsWhiteSpace(line[i]))
 					return i;
