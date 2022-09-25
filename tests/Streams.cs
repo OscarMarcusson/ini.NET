@@ -3,7 +3,7 @@ using System.IO.Ini;
 namespace tests
 {
 	[TestClass]
-	public class UnitTest1
+	public class Streams
 	{
 		[TestMethod]
 		public void EmptyStream()
