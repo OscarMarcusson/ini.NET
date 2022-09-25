@@ -13,6 +13,7 @@ namespace System.IO.Ini
 
 		// Variables
 		public bool IsEmpty => Fields.Count == 0;
+		public int NumberOfFields => Fields.Count;
 		readonly Dictionary<string, string> Fields = new Dictionary<string, string>();
 
 

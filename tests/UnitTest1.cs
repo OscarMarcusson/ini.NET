@@ -11,6 +11,7 @@ namespace tests
 			var input = "".ToStream();
 			var dictionary = IniDictionary.FromStream(input);
 			Assert.IsTrue(dictionary.IsEmpty);
+			Assert.AreEqual(0, dictionary.NumberOfFields);
 		}
 
 		[TestMethod]
@@ -25,6 +26,7 @@ namespace tests
 			var input = ini.ToStream();
 			var dictionary = IniDictionary.FromStream(input);
 			Assert.IsFalse(dictionary.IsEmpty);
+			Assert.AreEqual(4, dictionary.NumberOfFields);
 		}
 	}
 }
