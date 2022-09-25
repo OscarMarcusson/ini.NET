@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace ini.NET
+namespace System.IO.Ini
 {
 	public class IniDictionary
 	{
