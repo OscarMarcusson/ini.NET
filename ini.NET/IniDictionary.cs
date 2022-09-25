@@ -1,4 +1,5 @@
-﻿using System.Reflection.Metadata;
+﻿using System.ComponentModel;
+using System.Reflection.Metadata;
 using System.Text;
 
 namespace System.IO.Ini
@@ -15,6 +16,37 @@ namespace System.IO.Ini
 				return value;
 
 			return defaultValue;
+		}
+
+
+		public T GetField<T>(string key, T defaultValue = default)
+		{
+			if (Fields.TryGetValue(key, out var value))
+			{
+				var parsedValue = Parse(value, defaultValue);
+				return parsedValue;
+			}
+			return defaultValue;
+		}
+
+		static T Parse<T>(object stringValue, T defaultValue)
+		{
+			try
+			{
+				if (Nullable.GetUnderlyingType(typeof(T)) != null)
+				{
+					var conv = TypeDescriptor.GetConverter(typeof(T));
+					return (T)conv.ConvertFrom(stringValue);
+				}
+				else
+				{
+					return (T)Convert.ChangeType(stringValue, typeof(T));
+				}
+			}
+			catch (Exception)
+			{
+				return defaultValue;
+			}
 		}
 	}
 
