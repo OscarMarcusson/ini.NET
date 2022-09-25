@@ -27,6 +27,10 @@ namespace tests
 			var dictionary = IniDictionary.FromStream(input);
 			Assert.IsFalse(dictionary.IsEmpty);
 			Assert.AreEqual(4, dictionary.NumberOfFields);
+			Assert.AreEqual("Test Testsson", dictionary.GetField("name"));
+			Assert.AreEqual("123", dictionary.GetField("age"));
+			Assert.AreEqual("1.82", dictionary.GetField("height"));
+			Assert.AreEqual("true", dictionary.GetField("amazing"));
 		}
 	}
 }

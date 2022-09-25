@@ -17,6 +17,17 @@ namespace System.IO.Ini
 		readonly Dictionary<string, string> Fields = new Dictionary<string, string>();
 
 
+		public string? GetField(string key, string? defaultValue = null)
+		{
+			if (Fields.TryGetValue(key, out var value))
+				return value;
+
+			return defaultValue;
+		}
+
+
+
+
 
 		// "Constructors"
 		public static IniDictionary FromStream(Stream stream) => FromStream(stream, Encoding.UTF8);
