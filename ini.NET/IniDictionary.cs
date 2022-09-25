@@ -48,6 +48,7 @@ namespace System.IO.Ini
 
 			string? line;
 			int startIndex, endIndex;
+			IniFields? currentSection = dictionary;
 			while ((line = reader.ReadLine()) != null)
 			{
 				if (FindStartOfContent(line, out startIndex))
@@ -64,6 +65,16 @@ namespace System.IO.Ini
 								continue;
 							}
 
+							var sectionName = line.Substring(startIndex, endIndex - startIndex);
+							if (dictionary.Sections.ContainsKey(sectionName))
+							{
+								// TODO:: Error handling
+								currentSection = null;
+								continue;
+							}
+
+							currentSection = new IniFields();
+							dictionary.Sections[sectionName] = currentSection;
 							break;
 
 
@@ -83,12 +94,16 @@ namespace System.IO.Ini
 
 						// [Key value pairs]
 						default:
+							// For incorrect sections we skip all content until a new section is found
+							if (currentSection == null)
+								continue;
+
 							// TODO:: Some setting for if digits are allowed?
 							if (FindEndOfKey(line, startIndex, out endIndex))
 							{
 								var key = line.Substring(startIndex, endIndex - startIndex);
 								
-								if (dictionary.Fields.ContainsKey(key))
+								if (currentSection.Fields.ContainsKey(key))
 								{
 									// TODO:: Error handling
 									continue;
@@ -113,7 +128,7 @@ namespace System.IO.Ini
 								endIndex = FindEndOfLine(line);
 								var value = line.Substring(startIndex, endIndex - startIndex + 1);
 
-								dictionary.Fields[key] = value;
+								currentSection.Fields[key] = value;
 							}
 							else
 							{
