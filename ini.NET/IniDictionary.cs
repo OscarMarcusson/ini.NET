@@ -1,86 +1,121 @@
 ﻿using System.ComponentModel;
+using System.Data;
 using System.Reflection.Metadata;
 using System.Text;
+using System.Xml.Linq;
 
-namespace System.IO.Ini
+namespace System.IO
 {
-	public class IniFields
+	public static class Ini
 	{
-		public bool IsEmpty => Fields.Count == 0;
-		public int NumberOfFields => Fields.Count;
-		internal readonly Dictionary<string, string> Fields = new Dictionary<string, string>();
+		static Dictionary<Type, InstanceData> InstanceSetters = new Dictionary<Type, InstanceData>();
 
-		public string? GetField(string key, string? defaultValue = null)
+		class InstanceData
 		{
-			if (Fields.TryGetValue(key, out var value))
-				return value;
-
-			return defaultValue;
-		}
+			readonly Type Type;
+			readonly Dictionary<string, Action<object, object?>> Values;
 
 
-		public T GetField<T>(string key, T defaultValue = default)
-		{
-			if (Fields.TryGetValue(key, out var value))
+			public InstanceData(Type type)
 			{
-				var parsedValue = Parse(value, defaultValue);
-				return parsedValue;
+				Type = type;
+				var test = new Dictionary<string, Action<object, object?>>();
+
+				var properties = type.GetProperties().Where(x => x.CanWrite);
+				foreach (var property in properties)
+					test.Add(property.Name, (instance, value) => property.SetValue(instance, value));
+
+				var fields = type.GetFields().Where(x => x.IsPublic).ToDictionary(x => x.Name);
 			}
-			return defaultValue;
+
+
+			public void SetValue<TInstance, TValue>(string name, TInstance instance, TValue value)
+			{
+				if (instance == null)
+					throw new ArgumentNullException($"Failed to set the field \"{name}\" value on instance type \"{Type.Name}\", instance was null");
+				
+				if (instance.GetType() != Type)
+					throw new ArgumentException($"Type missmatch, tried setting the field \"{name}\" to \"{value}\" on expected instance type \"{Type.Name}\" but got an instance with type \"{instance.GetType().Name}\"");
+
+				if (!Values.TryGetValue(name, out var setter))
+					throw new KeyNotFoundException($"Could not find a field or property named \"{name}\" in \"{Type.Name}\"");
+				
+				setter(instance, value);
+			}
 		}
 
-		static T Parse<T>(object stringValue, T defaultValue)
+
+
+
+
+
+
+		public static T DeserializeStream<T>(Stream stream) where T : new() => DeserializeStream<T>(stream, null);
+		public static T DeserializeStream<T>(Stream stream, Encoding? encoding) where T : new()
 		{
-			try
-			{
-				if (Nullable.GetUnderlyingType(typeof(T)) != null)
+			var instance = new T();
+			if (!InstanceSetters.TryGetValue(instance.GetType(), out var setter))
+				InstanceSetters[instance.GetType()] = setter = new InstanceData(instance.GetType());
+
+			ParseStream(
+				stream, 
+				encoding,
+				parseSection: name =>
 				{
-					var conv = TypeDescriptor.GetConverter(typeof(T));
-					return (T)conv.ConvertFrom(stringValue);
-				}
-				else
+
+				},
+				assignValue: (key, value) =>
 				{
-					return (T)Convert.ChangeType(stringValue, typeof(T));
-				}
-			}
-			catch (Exception)
-			{
-				return defaultValue;
-			}
-		}
-	}
+					// TODO:: Parse the value without using the Parse<T> call, or at least call it dynamically
+					var parsedValue = null as object;
+					setter.SetValue(key, instance, parsedValue);
+				});
 
-
-
-
-
-
-
-
-	public class IniDictionary : IniFields
-	{
-		public bool HasAnySections => Sections.Count > 0;
-		public int NumberOfSections => Sections.Count;
-		readonly Dictionary<string, IniFields> Sections = new Dictionary<string, IniFields>();
-
-		public IniFields? GetSection(string key, IniFields? defaultValue = null)
-		{
-			if (Sections.TryGetValue(key, out var section))
-				return section;
-
-			return defaultValue;
+			return instance;
 		}
 
-		// "Constructors"
-		public static IniDictionary FromStream(Stream stream) => FromStream(stream, Encoding.UTF8);
-		public static IniDictionary FromStream(Stream stream, Encoding encoding)
+
+		public static Dictionary FromStream(Stream stream) => FromStream(stream, null);
+		public static Dictionary FromStream(Stream stream, Encoding? encoding)
 		{
+			var dictionary = new Dictionary();
+			Fields? currentSection = dictionary;
+
+			ParseStream(
+				stream, 
+				encoding,
+				parseSection: name =>
+				{
+					if (dictionary.Sections.ContainsKey(name))
+					{
+						currentSection = null;
+						throw new DuplicateNameException($"A section called \"{name}\" already exists");
+					}
+
+					currentSection = new Fields();
+					dictionary.Sections[name] = currentSection;
+				},
+				assignValue: (key, value) => currentSection.Values[key] = value);
+
+
 			var reader = new StreamReader(stream, encoding);
-			var dictionary = new IniDictionary();
+
+
+			return dictionary;
+		}
+
+
+
+		static void ParseStream(Stream stream, Encoding? encoding, Action<string> parseSection, Action<string,string> assignValue)
+		{
+			var reader = encoding == null
+				? new StreamReader(stream, detectEncodingFromByteOrderMarks: true)
+				: new StreamReader(stream, encoding)
+				;
 
 			string? line;
 			int startIndex, endIndex;
-			IniFields? currentSection = dictionary;
+			var duplicateFieldChecker = new HashSet<string>(32);
 			while ((line = reader.ReadLine()) != null)
 			{
 				if (FindStartOfContent(line, out startIndex))
@@ -98,15 +133,7 @@ namespace System.IO.Ini
 							}
 
 							var sectionName = line.Substring(startIndex, endIndex - startIndex);
-							if (dictionary.Sections.ContainsKey(sectionName))
-							{
-								// TODO:: Error handling
-								currentSection = null;
-								continue;
-							}
-
-							currentSection = new IniFields();
-							dictionary.Sections[sectionName] = currentSection;
+							parseSection(sectionName);
 							break;
 
 
@@ -126,30 +153,22 @@ namespace System.IO.Ini
 
 						// [Key value pairs]
 						default:
-							// For incorrect sections we skip all content until a new section is found
-							if (currentSection == null)
-								continue;
-
 							// TODO:: Some setting for if digits are allowed?
 							if (FindEndOfKey(line, startIndex, out endIndex))
 							{
 								var key = line.Substring(startIndex, endIndex - startIndex);
-								
-								if (currentSection.Fields.ContainsKey(key))
-								{
-									// TODO:: Error handling
-									continue;
-								}
+
+								// Check for duplicates
+								if (duplicateFieldChecker.Contains(key))
+									throw new DuplicateNameException($"A field called \"{key}\" already exists");
+								duplicateFieldChecker.Add(key);
 
 								// Resolve the start of the value
 								if (line[endIndex] != '=')
 								{
-									endIndex = line.IndexOf('=', endIndex+1);
-									if(endIndex == -1)
-									{
-										// TODO:: Error handling
-										continue;
-									}
+									endIndex = line.IndexOf('=', endIndex + 1);
+									if (endIndex == -1)
+										throw new SyntaxErrorException($"The \"{key}\" field did not have the assignment character \"=\"");
 								}
 								endIndex++;
 								while (char.IsWhiteSpace(line[endIndex]))
@@ -157,10 +176,10 @@ namespace System.IO.Ini
 
 								// Everything from this point on is our value, but we should trim the end
 								startIndex = endIndex;
-								endIndex = FindEndOfLine(line);
+								endIndex = Ini.FindEndOfLine(line);
 								var value = line.Substring(startIndex, endIndex - startIndex + 1);
 
-								currentSection.Fields[key] = value;
+								assignValue(key, value);
 							}
 							else
 							{
@@ -170,9 +189,34 @@ namespace System.IO.Ini
 					}
 				}
 			}
-
-			return dictionary;
 		}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -222,6 +266,76 @@ namespace System.IO.Ini
 					return i;
 			}
 			return 0;
+		}
+
+
+
+
+		public class Fields
+		{
+			public bool IsEmpty => Fields.Count == 0;
+			public int NumberOfFields => Fields.Count;
+			internal readonly System.Collections.Generic.Dictionary<string, string> Values = new System.Collections.Generic.Dictionary<string, string>();
+
+			public string? GetField(string key, string? defaultValue = null)
+			{
+				if (Values.TryGetValue(key, out var value))
+					return value;
+
+				return defaultValue;
+			}
+
+
+			#pragma warning disable CS8601 // Possible null reference assignment.
+			public T GetField<T>(string key, T defaultValue = default)
+			#pragma warning restore CS8601 // Possible null reference assignment.
+			{
+				if (Values.TryGetValue(key, out var value))
+				{
+					var parsedValue = Parse(value, defaultValue);
+					return parsedValue;
+				}
+				return defaultValue;
+			}
+
+		}
+
+
+		static T Parse<T>(object stringValue, T defaultValue)
+		{
+			try
+			{
+				if (Nullable.GetUnderlyingType(typeof(T)) != null)
+				{
+					var conv = TypeDescriptor.GetConverter(typeof(T));
+					return (T)conv.ConvertFrom(stringValue);
+				}
+				else
+				{
+					return (T)Convert.ChangeType(stringValue, typeof(T));
+				}
+			}
+			catch (Exception)
+			{
+				return defaultValue;
+			}
+		}
+
+
+
+		public class Dictionary : Fields
+		{
+			public bool HasAnySections => Sections.Count > 0;
+			public int NumberOfSections => Sections.Count;
+			public System.Collections.Generic.Dictionary<string, Fields> Sections = new System.Collections.Generic.Dictionary<string, Fields>();
+
+			public Fields? GetSection(string key, Fields? defaultValue = null)
+			{
+				if (Sections.TryGetValue(key, out var section))
+					return section;
+
+				return defaultValue;
+			}
 		}
 	}
 }
