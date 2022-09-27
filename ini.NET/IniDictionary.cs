@@ -305,11 +305,15 @@ namespace System.IO
 
 				return defaultValue;
 			}
-			
-			
-			
-			
-			
+
+
+
+
+			public static Dictionary FromString(string ini)
+			{
+				// TODO:: Implement
+				return null;
+			}
 			
 			public static Dictionary FromStream(Stream stream) => FromStream(stream, null);
 			public static Dictionary FromStream(Stream stream, Encoding? encoding)

@@ -3,22 +3,20 @@ using System.IO;
 namespace tests
 {
 	[TestClass]
-	public class Streams
+	public class Strings
 	{
 		[TestMethod]
-		public void EmptyStream()
+		public void Empty()
 		{
-			var input = "".ToStream();
-			var dictionary = Ini.Dictionary.FromStream(input);
+			var dictionary = Ini.Dictionary.FromString("");
 			Assert.IsTrue(dictionary.IsEmpty);
 			Assert.AreEqual(0, dictionary.NumberOfFields);
 		}
-
+		
 		[TestMethod]
-		public void StreamWithFields()
+		public void Fields()
 		{
-			var input = TestData.RootVariables.ToStream();
-			var dictionary = Ini.Dictionary.FromStream(input);
+			var dictionary = Ini.Dictionary.FromString(TestData.RootVariables);
 			Assert.IsFalse(dictionary.IsEmpty);
 			Assert.AreEqual(4, dictionary.NumberOfFields);
 			Assert.AreEqual("Test Testsson", dictionary.GetField("name"));
@@ -28,10 +26,9 @@ namespace tests
 		}
 
 		[TestMethod]
-		public void StreamWithSections()
+		public void Sections()
 		{
-			var input = TestData.RootVariablesWithSections.ToStream();
-			var dictionary = Ini.Dictionary.FromStream(input);
+			var dictionary = Ini.Dictionary.FromString(TestData.RootVariablesWithSections);
 			Assert.IsFalse(dictionary.IsEmpty);
 			Assert.AreEqual(1, dictionary.NumberOfFields);
 			Assert.AreEqual("Test Testsson", dictionary.GetField("name"));
