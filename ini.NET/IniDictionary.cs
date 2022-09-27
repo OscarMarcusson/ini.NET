@@ -13,7 +13,7 @@ namespace System.IO
 		class InstanceData
 		{
 			readonly Type Type;
-			readonly Dictionary<string, Action<object, object?>> Values;
+			readonly Dictionary<string, Action<object, object?>> Values = new Dictionary<string, Action<object, object?>>();
 
 
 			public InstanceData(Type type)
@@ -74,38 +74,6 @@ namespace System.IO
 			return instance;
 		}
 
-
-		public static Dictionary FromStream(Stream stream) => FromStream(stream, null);
-		public static Dictionary FromStream(Stream stream, Encoding? encoding)
-		{
-			var dictionary = new Dictionary();
-			Fields? currentSection = dictionary;
-
-			ParseStream(
-				stream, 
-				encoding,
-				parseSection: name =>
-				{
-					if (dictionary.Sections.ContainsKey(name))
-					{
-						currentSection = null;
-						throw new DuplicateNameException($"A section called \"{name}\" already exists");
-					}
-
-					currentSection = new Fields();
-					dictionary.Sections[name] = currentSection;
-				},
-				assignValue: (key, value) => currentSection.Values[key] = value);
-
-
-			var reader = new StreamReader(stream, encoding);
-
-
-			return dictionary;
-		}
-
-
-
 		static void ParseStream(Stream stream, Encoding? encoding, Action<string> parseSection, Action<string,string> assignValue)
 		{
 			var reader = encoding == null
@@ -134,6 +102,7 @@ namespace System.IO
 
 							var sectionName = line.Substring(startIndex, endIndex - startIndex);
 							parseSection(sectionName);
+							duplicateFieldChecker.Clear();
 							break;
 
 
@@ -273,8 +242,8 @@ namespace System.IO
 
 		public class Fields
 		{
-			public bool IsEmpty => Fields.Count == 0;
-			public int NumberOfFields => Fields.Count;
+			public bool IsEmpty => Values.Count == 0;
+			public int NumberOfFields => Values.Count;
 			internal readonly System.Collections.Generic.Dictionary<string, string> Values = new System.Collections.Generic.Dictionary<string, string>();
 
 			public string? GetField(string key, string? defaultValue = null)
@@ -335,6 +304,40 @@ namespace System.IO
 					return section;
 
 				return defaultValue;
+			}
+			
+			
+			
+			
+			
+			
+			public static Dictionary FromStream(Stream stream) => FromStream(stream, null);
+			public static Dictionary FromStream(Stream stream, Encoding? encoding)
+			{
+				var dictionary = new Dictionary();
+				Fields? currentSection = dictionary;
+
+				ParseStream(
+					stream, 
+					encoding,
+					parseSection: name =>
+					{
+						if (dictionary.Sections.ContainsKey(name))
+						{
+							currentSection = null;
+							throw new DuplicateNameException($"A section called \"{name}\" already exists");
+						}
+
+						currentSection = new Fields();
+						dictionary.Sections[name] = currentSection;
+					},
+					assignValue: (key, value) => currentSection.Values[key] = value);
+
+
+				var reader = new StreamReader(stream, encoding);
+
+
+				return dictionary;
 			}
 		}
 	}

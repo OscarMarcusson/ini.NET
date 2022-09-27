@@ -1,4 +1,4 @@
-using System.IO.Ini;
+using System.IO;
 
 namespace tests
 {
@@ -9,7 +9,7 @@ namespace tests
 		public void DefaultValues()
 		{
 			var input = "".ToStream();
-			var dictionary = IniDictionary.FromStream(input);
+			var dictionary = Ini.Dictionary.FromStream(input);
 			Assert.IsNull(dictionary.GetField("test1"));
 			Assert.AreEqual("ABC123", dictionary.GetField("test2", "ABC123"));
 		}
@@ -22,7 +22,7 @@ namespace tests
 			          false = false
 			          ";
 			var input = ini.ToStream();
-			var dictionary = IniDictionary.FromStream(input);
+			var dictionary = Ini.Dictionary.FromStream(input);
 			Assert.IsTrue(dictionary.GetField<bool?>("true", defaultValue: null));
 			Assert.IsFalse(dictionary.GetField<bool?>("false", defaultValue: null));
 		}
@@ -37,7 +37,7 @@ namespace tests
 			          long = 45254343235
 			          ";
 			var input = ini.ToStream();
-			var dictionary = IniDictionary.FromStream(input);
+			var dictionary = Ini.Dictionary.FromStream(input);
 			Assert.AreEqual(128, dictionary.GetField<byte>("byte"));
 			Assert.AreEqual(16523, dictionary.GetField<short>("short"));
 			Assert.AreEqual(7534354, dictionary.GetField<int>("int"));
@@ -53,7 +53,7 @@ namespace tests
 			          decimal = 0.234723573923
 			          ";
 			var input = ini.ToStream();
-			var dictionary = IniDictionary.FromStream(input);
+			var dictionary = Ini.Dictionary.FromStream(input);
 			Assert.AreEqual(0.3465f, dictionary.GetField<float>("float"));
 			Assert.AreEqual(0.134728347, dictionary.GetField<double>("double"));
 			Assert.AreEqual(0.234723573923m, dictionary.GetField<decimal>("decimal"));

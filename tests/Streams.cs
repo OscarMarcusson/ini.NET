@@ -1,4 +1,4 @@
-using System.IO.Ini;
+using System.IO;
 
 namespace tests
 {
@@ -9,7 +9,7 @@ namespace tests
 		public void EmptyStream()
 		{
 			var input = "".ToStream();
-			var dictionary = IniDictionary.FromStream(input);
+			var dictionary = Ini.Dictionary.FromStream(input);
 			Assert.IsTrue(dictionary.IsEmpty);
 			Assert.AreEqual(0, dictionary.NumberOfFields);
 		}
@@ -24,7 +24,7 @@ namespace tests
 			          amazing = true
 			          ";
 			var input = ini.ToStream();
-			var dictionary = IniDictionary.FromStream(input);
+			var dictionary = Ini.Dictionary.FromStream(input);
 			Assert.IsFalse(dictionary.IsEmpty);
 			Assert.AreEqual(4, dictionary.NumberOfFields);
 			Assert.AreEqual("Test Testsson", dictionary.GetField("name"));
@@ -50,7 +50,7 @@ namespace tests
 			          amazing = false
 			          ";
 			var input = ini.ToStream();
-			var dictionary = IniDictionary.FromStream(input);
+			var dictionary = Ini.Dictionary.FromStream(input);
 			Assert.IsFalse(dictionary.IsEmpty);
 			Assert.AreEqual(1, dictionary.NumberOfFields);
 			Assert.AreEqual("Test Testsson", dictionary.GetField("name"));
