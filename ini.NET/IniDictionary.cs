@@ -311,6 +311,9 @@ namespace System.IO
 
 			public static Dictionary FromString(string ini)
 			{
+				if (string.IsNullOrWhiteSpace(ini))
+					return new Dictionary();
+				
 				// TODO:: Implement
 				return null;
 			}
