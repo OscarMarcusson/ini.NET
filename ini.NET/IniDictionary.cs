@@ -57,9 +57,9 @@ namespace System.IO
 			if (!InstanceSetters.TryGetValue(instance.GetType(), out var setter))
 				InstanceSetters[instance.GetType()] = setter = new InstanceData(instance.GetType());
 
-			ParseStream(
-				stream, 
-				encoding,
+			var reader = CreateReader(stream, encoding);
+			ParseReader(
+				reader, 
 				parseSection: name =>
 				{
 
@@ -74,13 +74,16 @@ namespace System.IO
 			return instance;
 		}
 
-		static void ParseStream(Stream stream, Encoding? encoding, Action<string> parseSection, Action<string,string> assignValue)
-		{
-			var reader = encoding == null
-				? new StreamReader(stream, detectEncodingFromByteOrderMarks: true)
-				: new StreamReader(stream, encoding)
-				;
 
+		static TextReader CreateReader(Stream stream, Encoding? encoding)
+			=> encoding == null
+					? new StreamReader(stream, detectEncodingFromByteOrderMarks: true)
+					: new StreamReader(stream, encoding)
+					;
+
+
+		static void ParseReader(TextReader reader, Action<string> parseSection, Action<string,string> assignValue)
+		{
 			string? line;
 			int startIndex, endIndex;
 			var duplicateFieldChecker = new HashSet<string>(32);
@@ -314,19 +317,24 @@ namespace System.IO
 				if (string.IsNullOrWhiteSpace(ini))
 					return new Dictionary();
 				
-				// TODO:: Implement
-				return null;
+				var reader = new StringReader(ini);
+				return FromReader(reader);
 			}
+			
 			
 			public static Dictionary FromStream(Stream stream) => FromStream(stream, null);
 			public static Dictionary FromStream(Stream stream, Encoding? encoding)
 			{
+				var reader = CreateReader(stream, encoding);
+				return FromReader(reader);
+			}
+			
+			static Dictionary FromReader(TextReader reader)
+			{
 				var dictionary = new Dictionary();
-				Fields? currentSection = dictionary;
-
-				ParseStream(
-					stream, 
-					encoding,
+				var currentSection = dictionary as Fields;
+				ParseReader(
+					reader,
 					parseSection: name =>
 					{
 						if (dictionary.Sections.ContainsKey(name))
@@ -339,10 +347,6 @@ namespace System.IO
 						dictionary.Sections[name] = currentSection;
 					},
 					assignValue: (key, value) => currentSection.Values[key] = value);
-
-
-				var reader = new StreamReader(stream, encoding);
-
 
 				return dictionary;
 			}
