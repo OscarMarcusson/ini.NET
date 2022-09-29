@@ -311,19 +311,32 @@ namespace System.IO
 
 
 
-
+			// Public functions for creating the dictionaries
 			public static Dictionary FromString(string ini)
 			{
 				if (string.IsNullOrWhiteSpace(ini))
 					return new Dictionary();
-				
-				var reader = new StringReader(ini);
+
+				using var reader = new StringReader(ini);
 				return FromReader(reader);
 			}
 			
-			
-			public static Dictionary FromStream(Stream stream) => FromStream(stream, null);
-			public static Dictionary FromStream(Stream stream, Encoding? encoding)
+			public static Dictionary FromFile(string path, Encoding? encoding = null)
+			{
+				if (path == null)
+					throw new ArgumentNullException(nameof(path));
+
+				if (string.IsNullOrWhiteSpace(path))
+					throw new ArgumentException("Expected a path, but input string was empty", nameof(path));
+				
+				if (!File.Exists(path))
+					throw new FileNotFoundException(path);
+
+				using var reader = File.OpenRead(path);
+				return FromStream(reader, encoding);
+			}
+
+			public static Dictionary FromStream(Stream stream, Encoding? encoding = null)
 			{
 				var reader = CreateReader(stream, encoding);
 				return FromReader(reader);
