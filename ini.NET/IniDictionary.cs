@@ -47,17 +47,29 @@ namespace System.IO
 
 
 
+		public static T FromString<T>(string ini) where T : new()
+		{
+			if (string.IsNullOrWhiteSpace(ini))
+				return new T();
+
+			using var reader = new StringReader(ini);
+			return InstanceFromReader<T>(reader);
+		}
 
 
+		public static T FromStream<T>(Stream stream) where T : new() => FromStream<T>(stream, null);
+		public static T FromStream<T>(Stream stream, Encoding? encoding) where T : new()
+		{
+			var reader = CreateReader(stream, encoding);
+			return InstanceFromReader<T>(reader);
+		}
 
-		public static T DeserializeStream<T>(Stream stream) where T : new() => DeserializeStream<T>(stream, null);
-		public static T DeserializeStream<T>(Stream stream, Encoding? encoding) where T : new()
+		static T InstanceFromReader<T>(TextReader reader) where T : new()
 		{
 			var instance = new T();
 			if (!InstanceSetters.TryGetValue(instance.GetType(), out var setter))
 				InstanceSetters[instance.GetType()] = setter = new InstanceData(instance.GetType());
 
-			var reader = CreateReader(stream, encoding);
 			ParseReader(
 				reader, 
 				parseSection: name =>
@@ -73,7 +85,6 @@ namespace System.IO
 
 			return instance;
 		}
-
 
 		static TextReader CreateReader(Stream stream, Encoding? encoding)
 			=> encoding == null

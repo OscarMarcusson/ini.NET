@@ -1,7 +1,22 @@
 namespace tests;
 
-public static class TestData
+public class TestData
 {
+	public string name;
+	public int age;
+	public decimal height;
+	public bool Amazing { get; set; }
+	public Info info1;
+	public Info info2;
+
+
+	public class Info
+	{
+		public int age;
+		public decimal height;
+		public bool Amazing { get; set; }
+	}
+	
 	public const string RootVariables = @"
 		name = Test Testsson
 		age = 123

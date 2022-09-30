@@ -1,6 +1,4 @@
-using System.IO;
-
-namespace tests
+namespace tests.Dictionary
 {
 	[TestClass]
 	public class Streams
