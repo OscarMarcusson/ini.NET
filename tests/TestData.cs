@@ -21,7 +21,7 @@ public class TestData
 		name = Test Testsson
 		age = 123
 		height = 1.82
-		amazing = true
+		Amazing = true
 		";
 
 	public const string RootVariablesWithSections = @"
@@ -30,11 +30,11 @@ public class TestData
 		[info1]
 		age = 123
 		height = 1.82
-		amazing = true
+		Amazing = true
 
 		[info2]
 		age = 765
 		height = 0.78
-		amazing = false
+		Amazing = false
 		";
 }

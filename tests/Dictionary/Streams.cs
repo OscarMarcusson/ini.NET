@@ -22,7 +22,7 @@ namespace tests.Dictionary
 			Assert.AreEqual("Test Testsson", dictionary.GetField("name"));
 			Assert.AreEqual("123", dictionary.GetField("age"));
 			Assert.AreEqual("1.82", dictionary.GetField("height"));
-			Assert.AreEqual("true", dictionary.GetField("amazing"));
+			Assert.AreEqual("true", dictionary.GetField("Amazing"));
 		}
 
 		[TestMethod]
@@ -41,7 +41,7 @@ namespace tests.Dictionary
 			Assert.AreEqual(3, info.NumberOfFields);
 			Assert.AreEqual("123", info.GetField("age"));
 			Assert.AreEqual("1.82", info.GetField("height"));
-			Assert.AreEqual("true", info.GetField("amazing"));
+			Assert.AreEqual("true", info.GetField("Amazing"));
 
 			info = dictionary.GetSection("info2");
 			Assert.IsNotNull(info);
@@ -49,7 +49,7 @@ namespace tests.Dictionary
 			Assert.AreEqual(3, info.NumberOfFields);
 			Assert.AreEqual("765", info.GetField("age"));
 			Assert.AreEqual("0.78", info.GetField("height"));
-			Assert.AreEqual("false", info.GetField("amazing"));
+			Assert.AreEqual("false", info.GetField("Amazing"));
 		}
 	}
 }

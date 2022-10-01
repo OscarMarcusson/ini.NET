@@ -20,9 +20,9 @@ namespace tests.Instance
 			var data = Ini.FromString<TestData>(TestData.RootVariables);
 			Assert.IsNotNull(data);
 			Assert.AreEqual("Test Testsson", data.name);
-			Assert.AreEqual("123", data.age);
-			Assert.AreEqual("1.82", data.height);
-			Assert.AreEqual("true", data.Amazing);
+			Assert.AreEqual(123, data.age);
+			Assert.AreEqual(1.82m, data.height);
+			Assert.AreEqual(true, data.Amazing);
 		}
 
 		[TestMethod]

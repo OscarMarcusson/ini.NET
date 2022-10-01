@@ -13,23 +13,33 @@ namespace System.IO
 		class InstanceData
 		{
 			readonly Type Type;
-			readonly Dictionary<string, Action<object, object?>> Values = new Dictionary<string, Action<object, object?>>();
+			readonly Dictionary<string, Action<object, string?>> Values = new Dictionary<string, Action<object, string?>>();
 
 
 			public InstanceData(Type type)
 			{
 				Type = type;
-				var test = new Dictionary<string, Action<object, object?>>();
 
 				var properties = type.GetProperties().Where(x => x.CanWrite);
 				foreach (var property in properties)
-					test.Add(property.Name, (instance, value) => property.SetValue(instance, value));
+					AddSetter(property.Name, property.PropertyType, property.SetValue);
 
-				var fields = type.GetFields().Where(x => x.IsPublic).ToDictionary(x => x.Name);
+				var fields = type.GetFields().Where(x => x.IsPublic);
+				foreach (var field in fields)
+					AddSetter(field.Name, field.FieldType, field.SetValue);
+			}
+
+			void AddSetter(string key, Type type, Action<object, object> setter)
+			{
+				// TODO:: Pre-calculate the type of parser to use based on type, to ensure we only do it once
+				Values.Add(key, (instance, stringValue) =>
+				{
+					setter(instance, ParseObject(stringValue, type));
+				});
 			}
 
 
-			public void SetValue<TInstance, TValue>(string name, TInstance instance, TValue value)
+			public void SetValue<TInstance>(string name, TInstance instance, string value)
 			{
 				if (instance == null)
 					throw new ArgumentNullException($"Failed to set the field \"{name}\" value on instance type \"{Type.Name}\", instance was null");
@@ -39,7 +49,7 @@ namespace System.IO
 
 				if (!Values.TryGetValue(name, out var setter))
 					throw new KeyNotFoundException($"Could not find a field or property named \"{name}\" in \"{Type.Name}\"");
-				
+
 				setter(instance, value);
 			}
 		}
@@ -69,18 +79,16 @@ namespace System.IO
 			var instance = new T();
 			if (!InstanceSetters.TryGetValue(instance.GetType(), out var setter))
 				InstanceSetters[instance.GetType()] = setter = new InstanceData(instance.GetType());
-
+			
 			ParseReader(
 				reader, 
 				parseSection: name =>
 				{
-
+					// TODO:: Implement me
 				},
 				assignValue: (key, value) =>
 				{
-					// TODO:: Parse the value without using the Parse<T> call, or at least call it dynamically
-					var parsedValue = null as object;
-					setter.SetValue(key, instance, parsedValue);
+					setter.SetValue(key, instance, value);
 				});
 
 			return instance;
@@ -293,14 +301,33 @@ namespace System.IO
 					var conv = TypeDescriptor.GetConverter(typeof(T));
 					return (T)conv.ConvertFrom(stringValue);
 				}
-				else
-				{
-					return (T)Convert.ChangeType(stringValue, typeof(T));
-				}
+
+				return (T)Convert.ChangeType(stringValue, typeof(T));
 			}
 			catch (Exception)
 			{
 				return defaultValue;
+			}
+		}
+		
+		static object ParseObject(string stringValue, Type type)
+		{
+			try
+			{
+				if (Nullable.GetUnderlyingType(type) != null)
+				{
+					var conv = TypeDescriptor.GetConverter(type);
+					return conv.ConvertFrom(stringValue);
+				}
+
+				return Convert.ChangeType(stringValue, type);
+			}
+			catch (Exception)
+			{
+				return type.IsValueType
+					? Activator.CreateInstance(type)
+					: null
+					;
 			}
 		}
 
