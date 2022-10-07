@@ -43,10 +43,10 @@ namespace tests.Instance
 			Assert.AreEqual(1.82m, data.info1.height);
 			Assert.AreEqual(true, data.info1.Amazing);
 
-			Assert.IsNotNull(data.info1);
-			Assert.AreEqual(765, data.info1.age);
-			Assert.AreEqual(0.78m, data.info1.height);
-			Assert.AreEqual(false, data.info1.Amazing);
+			Assert.IsNotNull(data.info2);
+			Assert.AreEqual(765, data.info2.age);
+			Assert.AreEqual(0.78m, data.info2.height);
+			Assert.AreEqual(false, data.info2.Amazing);
 		}
 	}
 }

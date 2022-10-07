@@ -77,21 +77,75 @@ namespace System.IO
 		static T InstanceFromReader<T>(TextReader reader) where T : new()
 		{
 			var instance = new T();
-			if (!InstanceSetters.TryGetValue(instance.GetType(), out var setter))
-				InstanceSetters[instance.GetType()] = setter = new InstanceData(instance.GetType());
-			
+			var currentInstance = instance as object;
+			var setter = GetInstanceSetter(instance.GetType());
+			var currentSetter = setter;
+
 			ParseReader(
 				reader, 
 				parseSection: name =>
 				{
-					// TODO:: Implement me
+					var property = instance.GetType().GetProperties().FirstOrDefault(x => x.Name == name);
+					if (property != null)
+					{
+						ResolveSection(property.PropertyType);
+						return;
+					}
+
+					var field = instance.GetType().GetFields().FirstOrDefault(x => x.Name == name);
+					if(field != null)
+					{
+						ResolveSection(field.FieldType);
+						return;
+					}
+
+					throw new NotSupportedException($"Could not create a section for \"{name}\", no such field or property exists");
+
+
+					void ResolveSection(Type type)
+					{
+						if (!type.IsClass)
+							throw new NotSupportedException($"Could not create a section for \"{name}\" since the \"{type}\" type is not a class");
+
+						if (!type.GetConstructors().Any(x => x.GetParameters().Length == 0))
+							throw new NotSupportedException($"Could not create a section for \"{name}\" since the \"{type}\" type does not contain a parameterless constructor");
+
+						currentInstance = Activator.CreateInstance(type);
+						SetValue(instance, name, currentInstance);
+
+						currentSetter = GetInstanceSetter(type);
+					}
 				},
 				assignValue: (key, value) =>
 				{
-					setter.SetValue(key, instance, value);
+					currentSetter.SetValue(key, currentInstance, value);
 				});
 
 			return instance;
+		}
+
+		static void SetValue(object instance, string name, object? value)
+		{
+			var property = instance.GetType().GetProperties().FirstOrDefault(x => x.Name == name);
+			if (property != null)
+			{
+				property.SetValue(instance, value);
+				return;
+			}
+
+			var field = instance.GetType().GetFields().FirstOrDefault(x => x.Name == name);
+			if (field != null)
+			{
+				field.SetValue(instance, value);
+				return;
+			}
+		}
+
+		static InstanceData GetInstanceSetter(Type type)
+		{
+			if (!InstanceSetters.TryGetValue(type, out var setter))
+				InstanceSetters[type] = setter = new InstanceData(type);
+			return setter;
 		}
 
 		static TextReader CreateReader(Stream stream, Encoding? encoding)
